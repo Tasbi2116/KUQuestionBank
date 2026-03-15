@@ -6,6 +6,13 @@ import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 
 import healthRouter from "./routes/health";
+import authRouter from "./routes/auth";
+import departmentRouter from "./routes/departments";
+import courseRouter from "./routes/courses";
+import uploadRouter from "./routes/uploads";
+import noteRouter from "./routes/notes";
+import bookmarkRouter from "./routes/bookmarks";
+
 import { errorHandler } from "./middleware/errorHandler";
 import { notFound } from "./middleware/notFound";
 
@@ -38,6 +45,12 @@ app.use("/api", limiter);
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use("/api/health", healthRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/departments", departmentRouter);
+app.use("/api/courses", courseRouter);
+app.use("/api/uploads", uploadRouter);
+app.use("/api/notes", noteRouter);
+app.use("/api/bookmarks", bookmarkRouter);
 
 // ─── Error Handlers ───────────────────────────────────────────────────────────
 app.use(notFound);
@@ -47,6 +60,7 @@ app.use(errorHandler);
 app.listen(PORT, () => {
     console.log(`✅ Server running on http://localhost:${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV ?? "development"}`);
+    console.log(`📡 API base: http://localhost:${PORT}/api`);
 });
 
 export default app;

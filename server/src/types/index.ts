@@ -4,6 +4,22 @@
 
 export type UserRole = "student" | "admin";
 
+export type ExamType =
+    | "Term Final"
+    | "Class Test"
+    | "Assignment"
+    | "Lab Report"
+    | "Other";
+
+export type CourseType =
+    | "theory"
+    | "lab"
+    | "project"
+    | "thesis"
+    | "elective";
+
+export type Degree = "BSc" | "MSc";
+
 export interface AuthUser {
     id: string;
     email: string;
@@ -17,4 +33,21 @@ export interface ApiResponse<T = null> {
     message: string;
     data?: T;
     error?: string;
+}
+
+export interface PaginatedResponse<T> {
+    items: T[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+// Augment Express Request to carry authenticated user
+declare global {
+    namespace Express {
+        interface Request {
+            user?: AuthUser;
+        }
+    }
 }
