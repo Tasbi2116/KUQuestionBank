@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { supabaseAdmin } from "../config/supabase";
+import { supabaseAdmin, supabaseAnon } from "../config/supabase";
 import { sendSuccess, sendError } from "../utils/response";
 
 // ─── Validation schemas ───────────────────────────────────────────────────────
@@ -22,7 +22,9 @@ const loginSchema = z.object({
 
 /**
  * POST /api/auth/register
- * Creates a new Supabase auth user + profile via trigger.
+ * Uses supabaseAnon.auth.signUp() so Supabase sends the
+ * real verification email through your configured SMTP.
+ * admin.createUser() bypasses email sending — never use it for registration.
  */
 export const register = async (req: Request, res: Response): Promise<void> => {
     const parsed = registerSchema.safeParse(req.body);
@@ -34,7 +36,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const { email, password, full_name, student_id, department_id } =
         parsed.data;
 
-    // Check student_id uniqueness before creating auth user
+    // Check student_id uniqueness
     const { data: existingStudent } = await supabaseAdmin
         .from("profiles")
         .select("id")
@@ -46,15 +48,29 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         return;
     }
 
-    // Create auth user — Supabase trigger will create the profile
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    // Check email uniqueness
+    const { data: existingEmail } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .single();
+
+    if (existingEmail) {
+        sendError(res, "Email already registered", 409);
+        return;
+    }
+
+    // Use anon client — this triggers the email verification flow
+    const { data, error } = await supabaseAnon.auth.signUp({
         email,
         password,
-        email_confirm: false, // requires email verification
-        user_metadata: {
-            full_name,
-            student_id,
-            department_id,
+        options: {
+            emailRedirectTo: `${process.env.CLIENT_URL}/auth/callback`,
+            data: {
+                full_name,
+                student_id,
+                department_id,
+            },
         },
     });
 
@@ -64,6 +80,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             return;
         }
         sendError(res, error.message, 400);
+        return;
+    }
+
+    if (!data.user) {
+        sendError(res, "Registration failed. Please try again.", 500);
         return;
     }
 
@@ -77,7 +98,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 /**
  * POST /api/auth/login
- * Signs in via Supabase — returns session tokens.
  */
 export const login = async (req: Request, res: Response): Promise<void> => {
     const parsed = loginSchema.safeParse(req.body);
@@ -88,21 +108,30 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const { email, password } = parsed.data;
 
-    const { data, error } =
-        await supabaseAdmin.auth.signInWithPassword({
-            email,
-            password,
-        });
+    const { data, error } = await supabaseAnon.auth.signInWithPassword({
+        email,
+        password,
+    });
 
     if (error) {
+        if (error.message.includes("Email not confirmed")) {
+            sendError(
+                res,
+                "Please verify your email before signing in. Check your inbox.",
+                401
+            );
+            return;
+        }
         sendError(res, "Invalid email or password", 401);
         return;
     }
 
-    // Fetch profile
+    // Fetch full profile from our profiles table
     const { data: profile } = await supabaseAdmin
         .from("profiles")
-        .select("id, email, full_name, student_id, role, department_id, avatar_url, created_at")
+        .select(
+            "id, email, full_name, student_id, role, department_id, avatar_url, created_at"
+        )
         .eq("id", data.user.id)
         .single();
 
@@ -116,7 +145,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 /**
  * GET /api/auth/me
- * Returns the authenticated user's profile.
  */
 export const getMe = async (req: Request, res: Response): Promise<void> => {
     const { data: profile, error } = await supabaseAdmin
@@ -137,7 +165,6 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
 
 /**
  * PATCH /api/auth/me
- * Updates the authenticated user's profile.
  */
 export const updateMe = async (req: Request, res: Response): Promise<void> => {
     const updateSchema = z.object({

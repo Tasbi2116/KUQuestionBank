@@ -1,31 +1,42 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import AppLayout from "@/components/layout/AppLayout";
 
-/**
- * Root application router.
- * Routes will be expanded in Phase 4.
- */
+import LoginPage from "@/pages/auth/LoginPage";
+import RegisterPage from "@/pages/auth/RegisterPage";
+import VerifyEmailPage from "@/pages/auth/VerifyEmailPage";
+import AuthCallbackPage from "@/pages/auth/AuthCallbackPage";
+import DashboardPage from "@/pages/DashboardPage";
+import BrowsePage from "@/pages/BrowsePage";
+import BookmarksPage from "@/pages/BookmarksPage";
+import ProfilePage from "@/pages/ProfilePage";
+
 function App(): JSX.Element {
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="card text-center space-y-3">
-              <h1 className="text-2xl font-bold text-primary-400">
-                🎓 KU Question Bank
-              </h1>
-              <p className="text-gray-400">
-                Khulna University · Phase 1 Setup Complete
-              </p>
-              <p className="text-xs text-gray-600">
-                Frontend is running. More coming in Phase 4.
-              </p>
-            </div>
-          </div>
-        }
-      />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/browse" element={<BrowsePage />} />
+            <Route path="/bookmarks" element={<BookmarksPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+        </Route>
+
+        {/* Redirects */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </AuthProvider>
   );
 }
 
