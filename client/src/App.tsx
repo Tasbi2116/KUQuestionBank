@@ -12,6 +12,13 @@ import BrowsePage from "@/pages/BrowsePage";
 import BookmarksPage from "@/pages/BookmarksPage";
 import ProfilePage from "@/pages/ProfilePage";
 
+import AdminLayout from "@/pages/admin/AdminLayout";
+import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
+import AdminUsersPage from "@/pages/admin/AdminUsersPage";
+import AdminDepartmentsPage from "@/pages/admin/AdminDepartmentsPage";
+import AdminCoursesPage from "@/pages/admin/AdminCoursesPage";
+import AdminFilesPage from "@/pages/admin/AdminFilesPage";
+
 function App(): JSX.Element {
   return (
     <AuthProvider>
@@ -22,13 +29,24 @@ function App(): JSX.Element {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
-        {/* Protected routes */}
+        {/* Student protected routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/bookmarks" element={<BookmarksPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+        </Route>
+
+        {/* Admin protected routes */}
+        <Route element={<ProtectedRoute adminOnly />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/admin/departments" element={<AdminDepartmentsPage />} />
+            <Route path="/admin/courses" element={<AdminCoursesPage />} />
+            <Route path="/admin/files" element={<AdminFilesPage />} />
           </Route>
         </Route>
 

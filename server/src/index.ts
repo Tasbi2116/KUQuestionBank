@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 
 import healthRouter from "./routes/health";
 import authRouter from "./routes/auth";
+import adminRouter from "./routes/admin";
 import departmentRouter from "./routes/departments";
 import courseRouter from "./routes/courses";
 import uploadRouter from "./routes/uploads";
@@ -46,6 +47,7 @@ app.use("/api", limiter);
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use("/api/health", healthRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/departments", departmentRouter);
 app.use("/api/courses", courseRouter);
 app.use("/api/uploads", uploadRouter);
