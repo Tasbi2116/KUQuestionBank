@@ -2,6 +2,7 @@ import {
     createContext,
     useContext,
     useEffect,
+    useRef,
     useState,
     ReactNode,
 } from "react";
@@ -26,50 +27,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
+    const initDone = useRef(false);
 
-    const fetchProfile = async () => {
+    const fetchProfile = async (): Promise<void> => {
         try {
-            const { data } = await api.get<{ success: boolean; data: UserProfile }>(
-                "/api/auth/me"
-            );
-            if (data.success) setProfile(data.data);
+            const { data } = await api.get<{
+                success: boolean;
+                data: UserProfile;
+            }>("/api/auth/me");
+            if (data?.success && data?.data) {
+                setProfile(data.data);
+            } else {
+                setProfile(null);
+            }
         } catch {
             setProfile(null);
         }
     };
 
-    const refreshProfile = async () => {
+    const refreshProfile = async (): Promise<void> => {
         await fetchProfile();
     };
 
     useEffect(() => {
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session) fetchProfile().finally(() => setLoading(false));
-            else setLoading(false);
-        });
+        if (initDone.current) return;
+        initDone.current = true;
 
-        // Listen for auth changes
+        // Listen to auth state changes — this is the single source of truth
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (_event, session) => {
+            async (event, session) => {
                 setSession(session);
                 setUser(session?.user ?? null);
-                if (session) await fetchProfile();
-                else setProfile(null);
-                setLoading(false);
+
+                if (session?.user) {
+                    // Small delay to ensure token is ready before API call
+                    setTimeout(async () => {
+                        await fetchProfile();
+                        setLoading(false);
+                    }, 100);
+                } else {
+                    setProfile(null);
+                    setLoading(false);
+                }
             }
         );
 
-        return () => subscription.unsubscribe();
+        // Get initial session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session) {
+                setLoading(false);
+            }
+            // If session exists, onAuthStateChange will fire and handle it
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
-    const signOut = async () => {
-        await supabase.auth.signOut();
+    const signOut = async (): Promise<void> => {
         setUser(null);
         setProfile(null);
         setSession(null);
+        await supabase.auth.signOut();
     };
 
     return (

@@ -7,13 +7,20 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
-    throw new Error("Missing Supabase environment variables.");
+if (!supabaseUrl) {
+    throw new Error("Missing SUPABASE_URL in server/.env");
+}
+if (!supabaseServiceKey) {
+    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY in server/.env");
+}
+if (!supabaseAnonKey) {
+    throw new Error("Missing SUPABASE_ANON_KEY in server/.env");
 }
 
 /**
- * Admin client — service role key.
+ * Admin client — uses service role key.
  * Bypasses RLS. Only use server-side for admin operations.
+ * Never expose to client.
  */
 export const supabaseAdmin: SupabaseClient = createClient(
     supabaseUrl,
@@ -27,9 +34,9 @@ export const supabaseAdmin: SupabaseClient = createClient(
 );
 
 /**
- * Anon client — anon key.
- * Used for auth operations that must go through the normal
- * Supabase flow (signup with email verification, login etc.)
+ * Anon client — uses anon/public key.
+ * Used for operations that must go through normal Supabase auth flow.
+ * This triggers email verification on signup.
  */
 export const supabaseAnon: SupabaseClient = createClient(
     supabaseUrl,

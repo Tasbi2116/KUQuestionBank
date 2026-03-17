@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { CheckCircle, XCircle, BookOpen } from "lucide-react";
@@ -9,53 +9,115 @@ export default function AuthCallbackPage() {
     const navigate = useNavigate();
     const [status, setStatus] = useState<Status>("verifying");
     const [message, setMessage] = useState("");
+    const hasRun = useRef(false);
 
     useEffect(() => {
+        // Prevent double execution
+        if (hasRun.current) return;
+        hasRun.current = true;
+
         const handleCallback = async () => {
             try {
-                // Supabase puts the token in the URL hash — this exchanges it for a session
-                const { data, error } = await supabase.auth.getSession();
+                // Give Supabase a moment to process the URL hash
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                // Supabase automatically parses the token from URL hash
+                // Just call getSession — it picks up the token from the URL
+                const {
+                    data: { session },
+                    error,
+                } = await supabase.auth.getSession();
 
                 if (error) {
+                    console.error("[Callback] getSession error:", error.message);
                     setStatus("error");
                     setMessage(error.message);
                     return;
                 }
 
-                if (data.session) {
+                if (session) {
+                    // Verified — sign out so they log in manually (security best practice)
+                    await supabase.auth.signOut();
                     setStatus("success");
-                    setMessage("Email verified successfully! Redirecting...");
-                    setTimeout(() => navigate("/dashboard"), 2000);
-                } else {
-                    // Try to parse tokens from URL hash manually
-                    const hashParams = new URLSearchParams(
-                        window.location.hash.substring(1)
+                    setMessage(
+                        "Your email has been verified successfully. Please sign in to continue."
                     );
+                    setTimeout(() => navigate("/login?verified=true"), 3000);
+                    return;
+                }
+
+                // No session from getSession — try exchanging code from URL
+                const url = new URL(window.location.href);
+
+                // Check for error in URL params (Supabase puts errors here)
+                const errorParam = url.searchParams.get("error");
+                const errorDescription = url.searchParams.get("error_description");
+
+                if (errorParam) {
+                    setStatus("error");
+                    setMessage(errorDescription ?? errorParam);
+                    return;
+                }
+
+                // Try code exchange (PKCE flow)
+                const code = url.searchParams.get("code");
+                if (code) {
+                    const { error: exchangeError } =
+                        await supabase.auth.exchangeCodeForSession(code);
+
+                    if (exchangeError) {
+                        setStatus("error");
+                        setMessage(exchangeError.message);
+                        return;
+                    }
+
+                    await supabase.auth.signOut();
+                    setStatus("success");
+                    setMessage(
+                        "Your email has been verified successfully. Please sign in to continue."
+                    );
+                    setTimeout(() => navigate("/login?verified=true"), 3000);
+                    return;
+                }
+
+                // Try hash-based token (implicit flow)
+                const hash = window.location.hash;
+                if (hash && hash.includes("access_token")) {
+                    const hashParams = new URLSearchParams(hash.substring(1));
                     const accessToken = hashParams.get("access_token");
                     const refreshToken = hashParams.get("refresh_token");
 
                     if (accessToken && refreshToken) {
-                        const { error: setError } = await supabase.auth.setSession({
+                        const { error: sessionError } = await supabase.auth.setSession({
                             access_token: accessToken,
                             refresh_token: refreshToken,
                         });
 
-                        if (setError) {
+                        if (sessionError) {
                             setStatus("error");
-                            setMessage(setError.message);
-                        } else {
-                            setStatus("success");
-                            setMessage("Email verified successfully! Redirecting...");
-                            setTimeout(() => navigate("/dashboard"), 2000);
+                            setMessage(sessionError.message);
+                            return;
                         }
-                    } else {
-                        setStatus("error");
-                        setMessage("Verification link is invalid or has expired.");
+
+                        await supabase.auth.signOut();
+                        setStatus("success");
+                        setMessage(
+                            "Your email has been verified successfully. Please sign in to continue."
+                        );
+                        setTimeout(() => navigate("/login?verified=true"), 3000);
+                        return;
                     }
                 }
-            } catch {
+
+                // Nothing worked
                 setStatus("error");
-                setMessage("Something went wrong during verification.");
+                setMessage(
+                    "Verification link is invalid or has expired. Please register again."
+                );
+            } catch (err) {
+                console.error("[Callback] unexpected error:", err);
+                setStatus("error");
+                setMessage("Something went wrong. Please try again.");
             }
         };
 
@@ -65,7 +127,6 @@ export default function AuthCallbackPage() {
     return (
         <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
             <div className="w-full max-w-md text-center">
-                {/* Logo */}
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-600 mb-6">
                     <BookOpen className="w-7 h-7 text-white" />
                 </div>
@@ -79,9 +140,7 @@ export default function AuthCallbackPage() {
                             <h2 className="text-lg font-semibold text-gray-100 mb-2">
                                 Verifying your email...
                             </h2>
-                            <p className="text-sm text-gray-400">
-                                Please wait a moment.
-                            </p>
+                            <p className="text-sm text-gray-400">Please wait a moment.</p>
                         </>
                     )}
 
@@ -93,7 +152,13 @@ export default function AuthCallbackPage() {
                             <h2 className="text-lg font-semibold text-gray-100 mb-2">
                                 Email Verified!
                             </h2>
-                            <p className="text-sm text-gray-400">{message}</p>
+                            <p className="text-sm text-gray-400 mb-5">{message}</p>
+                            <button
+                                onClick={() => navigate("/login?verified=true")}
+                                className="btn-primary w-full justify-center"
+                            >
+                                Go to Sign In
+                            </button>
                         </>
                     )}
 
@@ -106,12 +171,20 @@ export default function AuthCallbackPage() {
                                 Verification Failed
                             </h2>
                             <p className="text-sm text-gray-400 mb-5">{message}</p>
-                            <button
-                                onClick={() => navigate("/login")}
-                                className="btn-primary w-full justify-center"
-                            >
-                                Back to Sign In
-                            </button>
+                            <div className="space-y-2">
+                                <button
+                                    onClick={() => navigate("/login")}
+                                    className="btn-primary w-full justify-center"
+                                >
+                                    Go to Sign In
+                                </button>
+                                <button
+                                    onClick={() => navigate("/register")}
+                                    className="btn-secondary w-full justify-center"
+                                >
+                                    Register Again
+                                </button>
+                            </div>
                         </>
                     )}
                 </div>

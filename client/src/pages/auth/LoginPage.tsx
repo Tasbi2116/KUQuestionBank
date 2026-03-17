@@ -1,40 +1,61 @@
-import { useState, FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, FormEvent, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { LogIn, Eye, EyeOff, BookOpen } from "lucide-react";
-import api from "@/lib/axios";
+import { LogIn, Eye, EyeOff, BookOpen, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/utils/cn";
 
 export default function LoginPage() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const justVerified = searchParams.get("verified") === "true";
+
     const [form, setForm] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // If already logged in redirect to dashboard
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) navigate("/dashboard", { replace: true });
+        });
+    }, [navigate]);
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            const { data } = await api.post("/api/auth/login", form);
-            if (!data.success) {
-                toast.error(data.message);
+            // Login directly via Supabase client — no backend needed
+            // This avoids the lock conflict from setSession()
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: form.email,
+                password: form.password,
+            });
+
+            if (error) {
+                if (
+                    error.message.toLowerCase().includes("email not confirmed") ||
+                    error.message.toLowerCase().includes("not confirmed")
+                ) {
+                    toast.error(
+                        "Please verify your email first. Check your inbox."
+                    );
+                    return;
+                }
+                toast.error("Invalid email or password");
                 return;
             }
 
-            // Set session in Supabase client
-            await supabase.auth.setSession({
-                access_token: data.data.access_token,
-                refresh_token: data.data.refresh_token,
-            });
+            if (!data.session) {
+                toast.error("Login failed. Please try again.");
+                return;
+            }
 
             toast.success("Welcome back!");
-            navigate("/dashboard");
-        } catch (err: unknown) {
-            const msg =
-                err instanceof Error ? err.message : "Invalid email or password";
-            toast.error(msg);
+            navigate("/dashboard", { replace: true });
+        } catch {
+            toast.error("Something went wrong. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -56,6 +77,16 @@ export default function LoginPage() {
                     </p>
                 </div>
 
+                {/* Verified banner */}
+                {justVerified && (
+                    <div className="flex items-center gap-3 bg-green-900/30 border border-green-700/50 rounded-lg px-4 py-3 mb-4">
+                        <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                        <p className="text-sm text-green-300">
+                            Email verified successfully! You can now sign in.
+                        </p>
+                    </div>
+                )}
+
                 {/* Card */}
                 <div className="card">
                     <h2 className="text-lg font-medium text-gray-100 mb-6">
@@ -63,7 +94,6 @@ export default function LoginPage() {
                     </h2>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Email */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1.5">
                                 Email address
@@ -75,12 +105,11 @@ export default function LoginPage() {
                                 onChange={(e) =>
                                     setForm((f) => ({ ...f, email: e.target.value }))
                                 }
-                                placeholder="you@ku.ac.bd"
+                                placeholder="you@gmail.com"
                                 className="input-field"
                             />
                         </div>
 
-                        {/* Password */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1.5">
                                 Password
@@ -110,7 +139,6 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        {/* Submit */}
                         <button
                             type="submit"
                             disabled={loading}

@@ -3,10 +3,6 @@ import { supabaseAdmin } from "../config/supabase";
 import { sendError } from "../utils/response";
 import { AuthUser } from "../types";
 
-/**
- * Middleware: verifies the Supabase JWT from the Authorization header.
- * Attaches the authenticated user to req.user.
- */
 export const requireAuth = async (
     req: Request,
     res: Response,
@@ -21,8 +17,12 @@ export const requireAuth = async (
 
     const token = authHeader.split(" ")[1];
 
+    if (!token || token === "undefined" || token === "null") {
+        sendError(res, "Invalid token", 401);
+        return;
+    }
+
     try {
-        // Verify token with Supabase
         const {
             data: { user },
             error,
@@ -33,12 +33,11 @@ export const requireAuth = async (
             return;
         }
 
-        // Fetch profile to get role and student info
         const { data: profile, error: profileError } = await supabaseAdmin
             .from("profiles")
             .select("id, email, role, student_id, department_id")
             .eq("id", user.id)
-            .single();
+            .maybeSingle();
 
         if (profileError || !profile) {
             sendError(res, "User profile not found", 401);
@@ -48,14 +47,11 @@ export const requireAuth = async (
         req.user = profile as AuthUser;
         next();
     } catch (err) {
+        console.error("[requireAuth] error:", err);
         sendError(res, "Authentication failed", 401);
     }
 };
 
-/**
- * Middleware: restricts route to admin role only.
- * Must be used AFTER requireAuth.
- */
 export const requireAdmin = (
     req: Request,
     res: Response,

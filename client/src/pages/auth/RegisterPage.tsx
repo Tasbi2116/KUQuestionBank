@@ -21,16 +21,24 @@ export default function RegisterPage() {
     });
 
     useEffect(() => {
-        api
-            .get<{ success: boolean; data: Department[] }>("/api/departments")
-            .then(({ data }) => {
-                if (data.success) setDepartments(data.data);
+        // Departments is a public endpoint — use fetch directly
+        // to avoid any auth interceptor issues on the register page
+        fetch("http://localhost:5000/api/departments")
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.success) {
+                    setDepartments(data.data);
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to load departments:", err);
             });
     }, []);
 
-    const set = (field: keyof typeof form) => (
-        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-    ) => setForm((f) => ({ ...f, [field]: e.target.value }));
+    const set =
+        (field: keyof typeof form) =>
+            (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+                setForm((f) => ({ ...f, [field]: e.target.value }));
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -59,14 +67,12 @@ export default function RegisterPage() {
                 return;
             }
 
-            toast.success(
-                "Registration successful! Please check your email to verify your account."
-            );
-            navigate("/login");
+            // ✅ Always redirect to verify-email page after successful registration
+            navigate("/verify-email");
         } catch (err: unknown) {
-            const msg =
+            const message =
                 err instanceof Error ? err.message : "Registration failed";
-            toast.error(msg);
+            toast.error(message);
         } finally {
             setLoading(false);
         }
@@ -75,7 +81,6 @@ export default function RegisterPage() {
     return (
         <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-10">
             <div className="w-full max-w-md">
-                {/* Logo */}
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-600 mb-4">
                         <BookOpen className="w-7 h-7 text-white" />
@@ -88,14 +93,10 @@ export default function RegisterPage() {
                     </p>
                 </div>
 
-                {/* Card */}
                 <div className="card">
-                    <h2 className="text-lg font-medium text-gray-100 mb-6">
-                        Register
-                    </h2>
+                    <h2 className="text-lg font-medium text-gray-100 mb-6">Register</h2>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Full name */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1.5">
                                 Full name
@@ -110,7 +111,6 @@ export default function RegisterPage() {
                             />
                         </div>
 
-                        {/* Email */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1.5">
                                 Email address
@@ -120,12 +120,11 @@ export default function RegisterPage() {
                                 required
                                 value={form.email}
                                 onChange={set("email")}
-                                placeholder="you@ku.ac.bd"
+                                placeholder="you@gmail.com"
                                 className="input-field"
                             />
                         </div>
 
-                        {/* Student ID */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1.5">
                                 Student ID
@@ -140,7 +139,6 @@ export default function RegisterPage() {
                             />
                         </div>
 
-                        {/* Department */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1.5">
                                 Department
@@ -160,7 +158,6 @@ export default function RegisterPage() {
                             </select>
                         </div>
 
-                        {/* Password */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1.5">
                                 Password
@@ -188,7 +185,6 @@ export default function RegisterPage() {
                             </div>
                         </div>
 
-                        {/* Confirm password */}
                         <div>
                             <label className="block text-sm text-gray-400 mb-1.5">
                                 Confirm password
@@ -203,7 +199,6 @@ export default function RegisterPage() {
                             />
                         </div>
 
-                        {/* Submit */}
                         <button
                             type="submit"
                             disabled={loading}

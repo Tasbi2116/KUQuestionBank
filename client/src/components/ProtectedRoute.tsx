@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useEffect, useState } from "react";
 
 interface Props {
     adminOnly?: boolean;
@@ -7,8 +8,18 @@ interface Props {
 
 export default function ProtectedRoute({ adminOnly = false }: Props) {
     const { user, profile, loading } = useAuth();
+    const [timedOut, setTimedOut] = useState(false);
 
-    if (loading) {
+    // Safety net — if loading takes more than 5 seconds, force it through
+    useEffect(() => {
+        if (!loading) return;
+        const timer = setTimeout(() => {
+            setTimedOut(true);
+        }, 5000);
+        return () => clearTimeout(timer);
+    }, [loading]);
+
+    if (loading && !timedOut) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-950">
                 <div className="flex flex-col items-center gap-3">

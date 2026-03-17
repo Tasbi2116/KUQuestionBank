@@ -32,9 +32,13 @@ export default function Sidebar({ onClose }: Props) {
     const navigate = useNavigate();
 
     const handleSignOut = async () => {
-        await signOut();
-        toast.success("Signed out");
-        navigate("/login");
+        try {
+            await signOut();
+            toast.success("Signed out successfully");
+            navigate("/login", { replace: true });
+        } catch {
+            toast.error("Sign out failed. Please try again.");
+        }
     };
 
     return (
@@ -71,7 +75,6 @@ export default function Sidebar({ onClose }: Props) {
                     </NavLink>
                 ))}
 
-                {/* Admin section */}
                 {profile?.role === "admin" && (
                     <>
                         <div className="pt-3 pb-1 px-3">
@@ -103,7 +106,7 @@ export default function Sidebar({ onClose }: Props) {
 
             {/* User info + sign out */}
             <div className="px-3 py-4 border-t border-gray-800">
-                <div className="flex items-center gap-3 px-3 py-2 mb-1">
+                <div className="flex items-center gap-3 px-3 py-2 mb-2">
                     <div className="w-7 h-7 rounded-full bg-primary-700 flex items-center justify-center flex-shrink-0">
                         <span className="text-xs font-medium text-white">
                             {profile?.full_name?.[0]?.toUpperCase() ?? "U"}
@@ -120,7 +123,7 @@ export default function Sidebar({ onClose }: Props) {
                 </div>
                 <button
                     onClick={handleSignOut}
-                    className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-red-400 transition-colors"
+                    className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-red-900/20 hover:text-red-400 transition-colors"
                 >
                     <LogOut className="w-4 h-4" />
                     Sign out
