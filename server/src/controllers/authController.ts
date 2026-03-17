@@ -9,7 +9,10 @@ const registerSchema = z.object({
     email: z.string().email("Invalid email address"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     full_name: z.string().min(2, "Full name must be at least 2 characters"),
-    student_id: z.string().min(2, "Student ID is required"),
+    student_id: z
+        .string()
+        .length(6, "Student ID must be exactly 6 digits")
+        .regex(/^\d{6}$/, "Student ID must contain only digits"),
     department_id: z.string().uuid("Invalid department ID"),
 });
 

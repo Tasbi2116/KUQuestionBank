@@ -37,6 +37,7 @@ interface QuestionFile {
     description: string;
     file_size: number;
     created_at: string;
+    uploaded_by: string;
     profiles: { full_name: string; student_id: string };
 }
 
@@ -180,9 +181,9 @@ export default function BrowsePage() {
         try {
             await api.delete(`/api/uploads/${fileId}`);
             setFiles((prev) => prev.filter((f) => f.id !== fileId));
-            toast.success("File deleted");
+            toast.success("File deleted successfully");
         } catch {
-            toast.error("Failed to delete file");
+            toast.error("Failed to delete file. You can only delete your own uploads.");
         }
     };
 
@@ -689,7 +690,7 @@ export default function BrowsePage() {
                                             >
                                                 View
                                             </button>
-                                            {(profile?.role === "admin") && (
+                                            {(profile?.role === "admin" || profile?.id === file.uploaded_by) && (
                                                 <button
                                                     onClick={() => handleDelete(file.id)}
                                                     className="text-xs text-red-400 hover:text-red-300 transition-colors px-2"

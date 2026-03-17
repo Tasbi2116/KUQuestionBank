@@ -51,6 +51,10 @@ export default function RegisterPage() {
             toast.error("Password must be at least 8 characters");
             return;
         }
+        if (form.student_id.length !== 6) {
+            toast.error("Student ID must be exactly 6 digits");
+            return;
+        }
 
         setLoading(true);
         try {
@@ -128,15 +132,32 @@ export default function RegisterPage() {
                         <div>
                             <label className="block text-sm text-gray-400 mb-1.5">
                                 Student ID
+                                <span className="ml-2 text-xs text-gray-600">
+                                    (exactly 6 digits)
+                                </span>
                             </label>
                             <input
                                 type="text"
                                 required
                                 value={form.student_id}
-                                onChange={set("student_id")}
-                                placeholder="e.g. 2101012"
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                                    setForm((f) => ({ ...f, student_id: val }));
+                                }}
+                                placeholder="e.g. 210216"
+                                maxLength={6}
                                 className="input-field"
                             />
+                            {form.student_id.length > 0 && form.student_id.length < 6 && (
+                                <p className="text-xs text-amber-400 mt-1.5">
+                                    ⚠ Student ID must be exactly 6 digits
+                                </p>
+                            )}
+                            {form.student_id.length === 6 && (
+                                <p className="text-xs text-green-400 mt-1.5">
+                                    ✓ Valid Student ID
+                                </p>
+                            )}
                         </div>
 
                         <div>

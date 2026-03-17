@@ -31,7 +31,16 @@ export const getUploads = async (
         .from("question_files")
         .select(
             `
-      *,
+      id,
+      file_name,
+      file_type,
+      exam_type,
+      batch,
+      description,
+      file_size,
+      file_path,
+      uploaded_by,
+      created_at,
       courses(course_code, course_title, term, degree),
       profiles(full_name, student_id)
     `
