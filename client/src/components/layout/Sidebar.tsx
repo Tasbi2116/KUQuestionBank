@@ -7,6 +7,7 @@ import {
     User,
     LogOut,
     ShieldCheck,
+    Shield,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/utils/cn";
@@ -19,10 +20,6 @@ const navItems = [
     { to: "/profile", label: "Profile", icon: User },
 ];
 
-const adminItems = [
-    { to: "/admin", label: "Admin Panel", icon: ShieldCheck },
-];
-
 interface Props {
     onClose?: () => void;
 }
@@ -30,6 +27,31 @@ interface Props {
 export default function Sidebar({ onClose }: Props) {
     const { profile, signOut } = useAuth();
     const navigate = useNavigate();
+
+    const role = profile?.role ?? "student";
+    const isFullAdmin = role === "admin";
+    const isDisciplineAdmin = role === "discipline_admin";
+    const hasAdminAccess = isFullAdmin || isDisciplineAdmin;
+
+    const adminLabel = isFullAdmin ? "Admin Panel" : "Discipline Admin";
+
+    const avatarBg = isFullAdmin
+        ? "bg-red-700"
+        : isDisciplineAdmin
+            ? "bg-amber-700"
+            : "bg-primary-700";
+
+    const roleLabel = isFullAdmin
+        ? "Administrator"
+        : isDisciplineAdmin
+            ? "Discipline Admin"
+            : "Student";
+
+    const roleColor = isFullAdmin
+        ? "text-red-400"
+        : isDisciplineAdmin
+            ? "text-amber-400"
+            : "text-gray-500";
 
     const handleSignOut = async () => {
         try {
@@ -49,7 +71,9 @@ export default function Sidebar({ onClose }: Props) {
                     <BookOpen className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                    <p className="text-sm font-semibold text-gray-100">KU Question Bank</p>
+                    <p className="text-sm font-semibold text-gray-100">
+                        KU Question Bank
+                    </p>
                     <p className="text-xs text-gray-500">Khulna University</p>
                 </div>
             </div>
@@ -75,31 +99,35 @@ export default function Sidebar({ onClose }: Props) {
                     </NavLink>
                 ))}
 
-                {profile?.role === "admin" && (
+                {/* Admin section */}
+                {hasAdminAccess && (
                     <>
                         <div className="pt-3 pb-1 px-3">
                             <p className="text-xs font-medium text-gray-600 uppercase tracking-wider">
-                                Admin
+                                {isFullAdmin ? "Administration" : "Discipline"}
                             </p>
                         </div>
-                        {adminItems.map(({ to, label, icon: Icon }) => (
-                            <NavLink
-                                key={to}
-                                to={to}
-                                onClick={onClose}
-                                className={({ isActive }) =>
-                                    cn(
-                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                                        isActive
-                                            ? "bg-primary-600/20 text-primary-400"
-                                            : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
-                                    )
-                                }
-                            >
-                                <Icon className="w-4 h-4 flex-shrink-0" />
-                                {label}
-                            </NavLink>
-                        ))}
+                        <NavLink
+                            to="/admin"
+                            onClick={onClose}
+                            className={({ isActive }) =>
+                                cn(
+                                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                                    isActive
+                                        ? isFullAdmin
+                                            ? "bg-red-600/20 text-red-400"
+                                            : "bg-amber-600/20 text-amber-400"
+                                        : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+                                )
+                            }
+                        >
+                            {isFullAdmin ? (
+                                <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                            ) : (
+                                <Shield className="w-4 h-4 flex-shrink-0" />
+                            )}
+                            {adminLabel}
+                        </NavLink>
                     </>
                 )}
             </nav>
@@ -107,7 +135,12 @@ export default function Sidebar({ onClose }: Props) {
             {/* User info + sign out */}
             <div className="px-3 py-4 border-t border-gray-800">
                 <div className="flex items-center gap-3 px-3 py-2 mb-2">
-                    <div className="w-7 h-7 rounded-full bg-primary-700 flex items-center justify-center flex-shrink-0">
+                    <div
+                        className={cn(
+                            "w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0",
+                            avatarBg
+                        )}
+                    >
                         <span className="text-xs font-medium text-white">
                             {profile?.full_name?.[0]?.toUpperCase() ?? "U"}
                         </span>
@@ -116,8 +149,8 @@ export default function Sidebar({ onClose }: Props) {
                         <p className="text-sm font-medium text-gray-200 truncate">
                             {profile?.full_name ?? "Loading..."}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">
-                            {profile?.student_id ?? ""}
+                        <p className={cn("text-xs truncate", roleColor)}>
+                            {roleLabel}
                         </p>
                     </div>
                 </div>

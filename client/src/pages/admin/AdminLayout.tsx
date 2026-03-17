@@ -8,6 +8,7 @@ import {
     FileText,
     LogOut,
     ShieldCheck,
+    Shield,
     Menu,
     X,
 } from "lucide-react";
@@ -15,17 +16,49 @@ import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/utils/cn";
 import { toast } from "react-hot-toast";
 
-const navItems = [
-    { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-    { to: "/admin/users", label: "Users", icon: Users },
-    { to: "/admin/departments", label: "Departments", icon: FolderOpen },
-    { to: "/admin/courses", label: "Courses", icon: BookOpen },
-    { to: "/admin/files", label: "Files", icon: FileText },
-];
-
 function AdminSidebar({ onClose }: { onClose?: () => void }) {
     const { profile, signOut } = useAuth();
     const navigate = useNavigate();
+    const isFullAdmin = profile?.role === "admin";
+
+    const navItems = [
+        {
+            to: "/admin",
+            label: "Dashboard",
+            icon: LayoutDashboard,
+            exact: true,
+            show: true,
+        },
+        {
+            to: "/admin/users",
+            label: "Users",
+            icon: Users,
+            exact: false,
+            show: true,
+        },
+        {
+            to: "/admin/departments",
+            label: "Departments",
+            icon: FolderOpen,
+            exact: false,
+            // Discipline admin cannot manage departments
+            show: isFullAdmin,
+        },
+        {
+            to: "/admin/courses",
+            label: "Courses",
+            icon: BookOpen,
+            exact: false,
+            show: true,
+        },
+        {
+            to: "/admin/files",
+            label: "Files",
+            icon: FileText,
+            exact: false,
+            show: true,
+        },
+    ];
 
     const handleSignOut = async () => {
         await signOut();
@@ -37,38 +70,52 @@ function AdminSidebar({ onClose }: { onClose?: () => void }) {
         <div className="flex flex-col h-full bg-gray-900 border-r border-gray-800">
             {/* Logo */}
             <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-800">
-                <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center flex-shrink-0">
-                    <ShieldCheck className="w-4 h-4 text-white" />
+                <div
+                    className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                        isFullAdmin ? "bg-red-600" : "bg-amber-600"
+                    )}
+                >
+                    {isFullAdmin ? (
+                        <ShieldCheck className="w-4 h-4 text-white" />
+                    ) : (
+                        <Shield className="w-4 h-4 text-white" />
+                    )}
                 </div>
                 <div>
-                    <p className="text-sm font-semibold text-gray-100">Admin Panel</p>
+                    <p className="text-sm font-semibold text-gray-100">
+                        {isFullAdmin ? "Admin Panel" : "Discipline Admin"}
+                    </p>
                     <p className="text-xs text-gray-500">KU Question Bank</p>
                 </div>
             </div>
 
             {/* Nav */}
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                {navItems.map(({ to, label, icon: Icon, exact }) => (
-                    <NavLink
-                        key={to}
-                        to={to}
-                        end={exact}
-                        onClick={onClose}
-                        className={({ isActive }) =>
-                            cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                                isActive
-                                    ? "bg-red-600/20 text-red-400"
-                                    : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
-                            )
-                        }
-                    >
-                        <Icon className="w-4 h-4 flex-shrink-0" />
-                        {label}
-                    </NavLink>
-                ))}
+                {navItems
+                    .filter((item) => item.show)
+                    .map(({ to, label, icon: Icon, exact }) => (
+                        <NavLink
+                            key={to}
+                            to={to}
+                            end={exact}
+                            onClick={onClose}
+                            className={({ isActive }) =>
+                                cn(
+                                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                                    isActive
+                                        ? isFullAdmin
+                                            ? "bg-red-600/20 text-red-400"
+                                            : "bg-amber-600/20 text-amber-400"
+                                        : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+                                )
+                            }
+                        >
+                            <Icon className="w-4 h-4 flex-shrink-0" />
+                            {label}
+                        </NavLink>
+                    ))}
 
-                {/* Back to student view */}
                 <div className="pt-3">
                     <NavLink
                         to="/dashboard"
@@ -84,7 +131,12 @@ function AdminSidebar({ onClose }: { onClose?: () => void }) {
             {/* User */}
             <div className="px-3 py-4 border-t border-gray-800">
                 <div className="flex items-center gap-3 px-3 py-2 mb-2">
-                    <div className="w-7 h-7 rounded-full bg-red-700 flex items-center justify-center flex-shrink-0">
+                    <div
+                        className={cn(
+                            "w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0",
+                            isFullAdmin ? "bg-red-700" : "bg-amber-700"
+                        )}
+                    >
                         <span className="text-xs font-medium text-white">
                             {profile?.full_name?.[0]?.toUpperCase() ?? "A"}
                         </span>
@@ -93,7 +145,14 @@ function AdminSidebar({ onClose }: { onClose?: () => void }) {
                         <p className="text-sm font-medium text-gray-200 truncate">
                             {profile?.full_name ?? "Admin"}
                         </p>
-                        <p className="text-xs text-red-400">Administrator</p>
+                        <p
+                            className={cn(
+                                "text-xs",
+                                isFullAdmin ? "text-red-400" : "text-amber-400"
+                            )}
+                        >
+                            {isFullAdmin ? "Administrator" : "Discipline Admin"}
+                        </p>
                     </div>
                 </div>
                 <button
@@ -113,12 +172,10 @@ export default function AdminLayout() {
 
     return (
         <div className="flex h-screen bg-gray-950 overflow-hidden">
-            {/* Desktop sidebar */}
             <aside className="hidden lg:flex lg:flex-col lg:w-60 flex-shrink-0">
                 <AdminSidebar />
             </aside>
 
-            {/* Mobile sidebar */}
             {sidebarOpen && (
                 <div className="fixed inset-0 z-40 lg:hidden">
                     <div
@@ -132,7 +189,6 @@ export default function AdminLayout() {
             )}
 
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                {/* Mobile topbar */}
                 <header className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-800 bg-gray-900">
                     <button
                         onClick={() => setSidebarOpen(true)}
@@ -140,7 +196,9 @@ export default function AdminLayout() {
                     >
                         <Menu className="w-5 h-5" />
                     </button>
-                    <span className="text-sm font-medium text-gray-100">Admin Panel</span>
+                    <span className="text-sm font-medium text-gray-100">
+                        Admin Panel
+                    </span>
                     {sidebarOpen && (
                         <button
                             onClick={() => setSidebarOpen(false)}
@@ -150,7 +208,6 @@ export default function AdminLayout() {
                         </button>
                     )}
                 </header>
-
                 <main className="flex-1 overflow-y-auto p-4 lg:p-6">
                     <Outlet />
                 </main>

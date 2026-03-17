@@ -10,12 +10,9 @@ export default function ProtectedRoute({ adminOnly = false }: Props) {
     const { user, profile, loading } = useAuth();
     const [timedOut, setTimedOut] = useState(false);
 
-    // Safety net — if loading takes more than 5 seconds, force it through
     useEffect(() => {
         if (!loading) return;
-        const timer = setTimeout(() => {
-            setTimedOut(true);
-        }, 5000);
+        const timer = setTimeout(() => setTimedOut(true), 5000);
         return () => clearTimeout(timer);
     }, [loading]);
 
@@ -32,8 +29,10 @@ export default function ProtectedRoute({ adminOnly = false }: Props) {
 
     if (!user) return <Navigate to="/login" replace />;
 
-    if (adminOnly && profile?.role !== "admin") {
-        return <Navigate to="/dashboard" replace />;
+    if (adminOnly) {
+        const role = profile?.role;
+        const hasAccess = role === "admin" || role === "discipline_admin";
+        if (!hasAccess) return <Navigate to="/dashboard" replace />;
     }
 
     return <Outlet />;

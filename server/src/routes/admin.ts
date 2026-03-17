@@ -1,16 +1,17 @@
 import { Router } from "express";
-import { requireAuth, requireAdmin } from "../middleware/auth";
+import { requireAuth, requireDisciplineAdmin } from "../middleware/auth";
 import {
     getAllUsers,
     updateUserRole,
     deleteUser,
-} from "../controllers/adminController";
+    getStats,
+} from "../controllers/adminController"
 
 const router = Router();
 
-// All admin routes require auth + admin role
-router.use(requireAuth, requireAdmin);
+router.use(requireAuth, requireDisciplineAdmin);
 
+router.get("/stats", getStats);
 router.get("/users", getAllUsers);
 router.patch("/users/:id/role", updateUserRole);
 router.delete("/users/:id", deleteUser);

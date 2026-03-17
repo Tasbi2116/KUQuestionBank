@@ -3,6 +3,9 @@ import { supabaseAdmin } from "../config/supabase";
 import { sendError } from "../utils/response";
 import { AuthUser } from "../types";
 
+/**
+ * Verifies Supabase JWT and attaches user to req.user
+ */
 export const requireAuth = async (
     req: Request,
     res: Response,
@@ -52,6 +55,9 @@ export const requireAuth = async (
     }
 };
 
+/**
+ * Full admin only
+ */
 export const requireAdmin = (
     req: Request,
     res: Response,
@@ -61,5 +67,29 @@ export const requireAdmin = (
         sendError(res, "Admin access required", 403);
         return;
     }
+    next();
+};
+
+/**
+ * Admin or discipline_admin — both can access admin panel.
+ * Scope enforcement happens inside individual controllers.
+ */
+export const requireDisciplineAdmin = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): void => {
+    if (!req.user) {
+        sendError(res, "Authentication required", 401);
+        return;
+    }
+
+    const { role } = req.user;
+
+    if (role !== "admin" && role !== "discipline_admin") {
+        sendError(res, "Admin access required", 403);
+        return;
+    }
+
     next();
 };

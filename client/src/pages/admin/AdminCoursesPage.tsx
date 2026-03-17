@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BookOpen, Plus, Trash2, Search, Filter } from "lucide-react";
 import api from "@/lib/axios";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
 import { Department } from "@/types";
 import { cn } from "@/utils/cn";
@@ -22,18 +23,12 @@ const TERMS = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
 const DEGREES = ["BSc", "MSc"];
 const COURSE_TYPES = ["theory", "lab", "project", "thesis", "elective"];
 
-const emptyForm = {
-    department_id: "",
-    degree: "BSc",
-    term: "1-1",
-    course_code: "",
-    course_title: "",
-    credit_hours: 3,
-    course_type: "theory",
-    is_optional: false,
-};
-
 export default function AdminCoursesPage() {
+    const { profile } = useAuth();
+    const actorRole = profile?.role ?? "student";
+    const isFullAdmin = actorRole === "admin";
+    const actorDeptId = profile?.department_id ?? "";
+
     const [courses, setCourses] = useState<Course[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [filtered, setFiltered] = useState<Course[]>([]);
@@ -43,13 +38,27 @@ export default function AdminCoursesPage() {
     const [search, setSearch] = useState("");
     const [filterDept, setFilterDept] = useState("");
     const [filterTerm, setFilterTerm] = useState("");
-    const [form, setForm] = useState(emptyForm);
+
+    const [form, setForm] = useState({
+        department_id: isFullAdmin ? "" : actorDeptId,
+        degree: "BSc",
+        term: "1-1",
+        course_code: "",
+        course_title: "",
+        credit_hours: 3,
+        course_type: "theory",
+        is_optional: false,
+    });
 
     useEffect(() => {
         const init = async () => {
             try {
+                const coursesUrl = isFullAdmin
+                    ? "/api/courses"
+                    : `/api/courses?department_id=${actorDeptId}`;
+
                 const [coursesRes, deptsRes] = await Promise.all([
-                    api.get<{ success: boolean; data: Course[] }>("/api/courses"),
+                    api.get<{ success: boolean; data: Course[] }>(coursesUrl),
                     api.get<{ success: boolean; data: Department[] }>("/api/departments"),
                 ]);
                 if (coursesRes.data.success) setCourses(coursesRes.data.data);
@@ -61,7 +70,7 @@ export default function AdminCoursesPage() {
             }
         };
         init();
-    }, []);
+    }, [isFullAdmin, actorDeptId]);
 
     useEffect(() => {
         let result = courses;
@@ -79,7 +88,11 @@ export default function AdminCoursesPage() {
     }, [search, filterDept, filterTerm, courses]);
 
     const handleCreate = async () => {
-        if (!form.department_id || !form.course_code.trim() || !form.course_title.trim()) {
+        if (
+            !form.department_id ||
+            !form.course_code.trim() ||
+            !form.course_title.trim()
+        ) {
             toast.error("Department, course code and title are required");
             return;
         }
@@ -90,8 +103,17 @@ export default function AdminCoursesPage() {
                 credit_hours: Number(form.credit_hours),
             });
             if (data.success) {
-                setCourses((prev) => [...prev, data.data]);
-                setForm(emptyForm);
+                setCourses((prev) => [...prev, data.data as Course]);
+                setForm({
+                    department_id: isFullAdmin ? "" : actorDeptId,
+                    degree: "BSc",
+                    term: "1-1",
+                    course_code: "",
+                    course_title: "",
+                    credit_hours: 3,
+                    course_type: "theory",
+                    is_optional: false,
+                });
                 setShowForm(false);
                 toast.success("Course created");
             }
@@ -118,12 +140,13 @@ export default function AdminCoursesPage() {
         }
     };
 
-    const setF = (field: keyof typeof form) =>
-        (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-            setForm((f) => ({ ...f, [field]: e.target.value }));
+    const setF =
+        (field: string) =>
+            (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+                setForm((f) => ({ ...f, [field]: e.target.value }));
 
     return (
-        <div className="space-y-5 max-w-5xl">
+        <div className="space-y-5 max-w-5xl animate-fade-in">
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-100 flex items-center gap-2">
@@ -131,7 +154,7 @@ export default function AdminCoursesPage() {
                         Courses
                     </h1>
                     <p className="text-sm text-gray-400 mt-1">
-                        {courses.length} total courses
+                        {courses.length} {isFullAdmin ? "total" : "department"} courses
                     </p>
                 </div>
                 <button
@@ -145,26 +168,39 @@ export default function AdminCoursesPage() {
 
             {/* Create form */}
             {showForm && (
-                <div className="card space-y-4">
+                <div className="card space-y-4 animate-scale-in">
                     <h3 className="text-sm font-medium text-gray-200">New Course</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Department — only full admin can choose */}
                         <div>
                             <label className="block text-xs text-gray-400 mb-1.5">
                                 Department
                             </label>
-                            <select
-                                value={form.department_id}
-                                onChange={setF("department_id")}
-                                className="input-field"
-                            >
-                                <option value="">Select department</option>
-                                {departments.map((d) => (
-                                    <option key={d.id} value={d.id}>
-                                        {d.short_name} — {d.name}
-                                    </option>
-                                ))}
-                            </select>
+                            {isFullAdmin ? (
+                                <select
+                                    value={form.department_id}
+                                    onChange={setF("department_id")}
+                                    className="input-field"
+                                >
+                                    <option value="">Select department</option>
+                                    {departments.map((d) => (
+                                        <option key={d.id} value={d.id}>
+                                            {d.short_name} — {d.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <input
+                                    type="text"
+                                    value={
+                                        departments.find((d) => d.id === actorDeptId)?.name ?? ""
+                                    }
+                                    disabled
+                                    className="input-field opacity-50 cursor-not-allowed"
+                                />
+                            )}
                         </div>
+
                         <div>
                             <label className="block text-xs text-gray-400 mb-1.5">
                                 Degree
@@ -179,6 +215,7 @@ export default function AdminCoursesPage() {
                                 ))}
                             </select>
                         </div>
+
                         <div>
                             <label className="block text-xs text-gray-400 mb-1.5">
                                 Term
@@ -193,6 +230,7 @@ export default function AdminCoursesPage() {
                                 ))}
                             </select>
                         </div>
+
                         <div>
                             <label className="block text-xs text-gray-400 mb-1.5">
                                 Course code
@@ -205,6 +243,7 @@ export default function AdminCoursesPage() {
                                 className="input-field"
                             />
                         </div>
+
                         <div className="sm:col-span-2">
                             <label className="block text-xs text-gray-400 mb-1.5">
                                 Course title
@@ -217,6 +256,7 @@ export default function AdminCoursesPage() {
                                 className="input-field"
                             />
                         </div>
+
                         <div>
                             <label className="block text-xs text-gray-400 mb-1.5">
                                 Credit hours
@@ -231,6 +271,7 @@ export default function AdminCoursesPage() {
                                 className="input-field"
                             />
                         </div>
+
                         <div>
                             <label className="block text-xs text-gray-400 mb-1.5">
                                 Course type
@@ -245,6 +286,7 @@ export default function AdminCoursesPage() {
                                 ))}
                             </select>
                         </div>
+
                         <div className="flex items-center gap-2 sm:col-span-2">
                             <input
                                 type="checkbox"
@@ -255,14 +297,12 @@ export default function AdminCoursesPage() {
                                 }
                                 className="w-4 h-4 rounded"
                             />
-                            <label
-                                htmlFor="is_optional"
-                                className="text-sm text-gray-400"
-                            >
+                            <label htmlFor="is_optional" className="text-sm text-gray-400">
                                 This is an elective/optional course
                             </label>
                         </div>
                     </div>
+
                     <div className="flex gap-2">
                         <button
                             onClick={handleCreate}
@@ -295,16 +335,18 @@ export default function AdminCoursesPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     <Filter className="w-4 h-4 text-gray-500" />
-                    <select
-                        value={filterDept}
-                        onChange={(e) => setFilterDept(e.target.value)}
-                        className="input-field"
-                    >
-                        <option value="">All departments</option>
-                        {departments.map((d) => (
-                            <option key={d.id} value={d.id}>{d.short_name}</option>
-                        ))}
-                    </select>
+                    {isFullAdmin && (
+                        <select
+                            value={filterDept}
+                            onChange={(e) => setFilterDept(e.target.value)}
+                            className="input-field"
+                        >
+                            <option value="">All departments</option>
+                            {departments.map((d) => (
+                                <option key={d.id} value={d.id}>{d.short_name}</option>
+                            ))}
+                        </select>
+                    )}
                     <select
                         value={filterTerm}
                         onChange={(e) => setFilterTerm(e.target.value)}
@@ -318,7 +360,7 @@ export default function AdminCoursesPage() {
                 </div>
             </div>
 
-            {/* Courses list */}
+            {/* Courses table */}
             {loading ? (
                 <div className="flex justify-center py-12">
                     <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />

@@ -2,7 +2,7 @@
  * Shared TypeScript types for the KU Question Bank client.
  */
 
-export type UserRole = "student" | "admin";
+export type UserRole = "student" | "discipline_admin" | "admin";
 
 export interface UserProfile {
     id: string;

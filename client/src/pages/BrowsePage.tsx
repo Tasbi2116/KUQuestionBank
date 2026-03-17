@@ -48,7 +48,6 @@ const TERMS = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
 const EXAM_TYPES = ["Term Final", "Class Test", "Assignment", "Lab Report", "Other"];
 
 export default function BrowsePage() {
-    const navigate = useNavigate();
     const { profile } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
 

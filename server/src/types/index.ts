@@ -2,7 +2,7 @@
  * Shared TypeScript types for the KU Question Bank server.
  */
 
-export type UserRole = "student" | "admin";
+export type UserRole = "student" | "discipline_admin" | "admin";
 
 export type ExamType =
     | "Term Final"
@@ -43,7 +43,8 @@ export interface PaginatedResponse<T> {
     totalPages: number;
 }
 
-// Augment Express Request to carry authenticated user
+// ─── Augment Express Request ──────────────────────────────────────────────────
+// This is what makes req.user work across all controllers
 declare global {
     namespace Express {
         interface Request {
