@@ -18,7 +18,7 @@ export type CourseType =
     | "thesis"
     | "elective";
 
-export type Degree = "BSc" | "MSc";
+export type Degree = "BSc" | "MSc" | "BSc(OBE)";
 
 export interface AuthUser {
     id: string;

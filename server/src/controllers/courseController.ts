@@ -5,7 +5,7 @@ import { sendSuccess, sendError } from "../utils/response";
 
 const courseSchema = z.object({
     department_id: z.string().uuid(),
-    degree: z.enum(["BSc", "MSc"]),
+    degree: z.enum(["BSc", "BSc(OBE)", "MSc"]),
     term: z.string().min(1, "Term is required"),
     course_code: z.string().min(1, "Course code is required"),
     course_title: z.string().min(1, "Course title is required"),

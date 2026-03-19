@@ -43,7 +43,7 @@ interface QuestionFile {
 
 type Step = "department" | "degree" | "term" | "course" | "files";
 
-const DEGREES = ["BSc", "MSc"];
+const DEGREES = ["BSc", "BSc(OBE)", "MSc"];
 const TERMS = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
 const EXAM_TYPES = ["Term Final", "Class Test", "Assignment", "Lab Report", "Other"];
 
@@ -369,12 +369,20 @@ export default function BrowsePage() {
                                 onClick={() =>
                                     setSearchParams({ dept: selectedDept, degree: deg })
                                 }
-                                className="card text-center hover:border-primary-700 hover:bg-gray-800/50 transition-colors group py-8"
+                                className="card text-center hover:border-primary-700 hover:bg-gray-800/50 transition-colors group py-8 relative"
                             >
+                                {deg === "BSc(OBE)" && (
+                                    <span className="absolute top-2 right-2 text-xs bg-teal-600/20 text-teal-400 px-2 py-0.5 rounded-full">
+                                        New
+                                    </span>
+                                )}
                                 <BookOpen className="w-6 h-6 text-primary-400 mx-auto mb-2" />
                                 <p className="text-sm font-medium text-gray-100 group-hover:text-primary-400 transition-colors">
                                     {deg}
                                 </p>
+                                {deg === "BSc(OBE)" && (
+                                    <p className="text-xs text-gray-500 mt-1">Outcome Based</p>
+                                )}
                             </button>
                         ))}
                     </div>
