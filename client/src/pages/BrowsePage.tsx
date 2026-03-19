@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
     ChevronRight,
     FolderOpen,
@@ -15,6 +15,7 @@ import { Department } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/utils/cn";
 import { toast } from "react-hot-toast";
+import FileViewer from "@/components/FileViewer";
 
 interface Course {
     id: string;
@@ -58,6 +59,9 @@ export default function BrowsePage() {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
 
+    // ── Inline file viewer state (fixed: moved inside component) ──────────────
+    const [viewingFileId, setViewingFileId] = useState<string | null>(null);
+
     // Upload form state
     const [uploadForm, setUploadForm] = useState({
         batch: "",
@@ -82,7 +86,10 @@ export default function BrowsePage() {
                     : "files";
 
     // Check if student can upload to selected department
-    const canUpload = profile?.department_id === selectedDept || profile?.role === "admin";
+    const canUpload =
+        profile?.department_id === selectedDept ||
+        profile?.role === "admin" ||
+        profile?.role === "discipline_admin";
 
     // Load departments
     useEffect(() => {
@@ -111,11 +118,8 @@ export default function BrowsePage() {
     useEffect(() => {
         if (!selectedCourseId) return;
         setLoading(true);
-
-        // Find selected course object
         const course = courses.find((c) => c.id === selectedCourseId);
         if (course) setSelectedCourse(course);
-
         api
             .get<{ success: boolean; data: QuestionFile[] }>(
                 `/api/uploads?course_id=${selectedCourseId}`
@@ -186,16 +190,9 @@ export default function BrowsePage() {
         }
     };
 
-    // View/download file
-    const handleView = async (fileId: string) => {
-        try {
-            const { data } = await api.get(`/api/uploads/${fileId}`);
-            if (data.success && data.data.signed_url) {
-                window.open(data.data.signed_url, "_blank");
-            }
-        } catch {
-            toast.error("Failed to open file");
-        }
+    // Open inline viewer
+    const handleView = (fileId: string) => {
+        setViewingFileId(fileId);
     };
 
     const formatBytes = (bytes: number) => {
@@ -294,7 +291,8 @@ export default function BrowsePage() {
             {step !== "department" && (
                 <button
                     onClick={() => {
-                        if (step === "degree") setSearchParams({});
+                        if (step === "degree")
+                            setSearchParams({});
                         else if (step === "term")
                             setSearchParams({ dept: selectedDept });
                         else if (step === "course")
@@ -362,7 +360,7 @@ export default function BrowsePage() {
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
                         Select degree — {selectedDeptObj?.name}
                     </p>
-                    <div className="grid grid-cols-2 gap-3 max-w-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-sm">
                         {DEGREES.map((deg) => (
                             <button
                                 key={deg}
@@ -467,9 +465,7 @@ export default function BrowsePage() {
                                                 {course.course_code} · {course.credit_hours} cr ·{" "}
                                                 <span className="capitalize">{course.course_type}</span>
                                                 {course.is_optional && (
-                                                    <span className="ml-1.5 text-amber-500">
-                                                        Elective
-                                                    </span>
+                                                    <span className="ml-1.5 text-amber-500">Elective</span>
                                                 )}
                                             </p>
                                         </div>
@@ -503,7 +499,7 @@ export default function BrowsePage() {
                         </div>
                     </div>
 
-                    {/* Upload section — only if student belongs to this department */}
+                    {/* Upload section */}
                     {canUpload ? (
                         <div className="card space-y-4">
                             <h3 className="text-sm font-medium text-gray-200 flex items-center gap-2">
@@ -591,8 +587,7 @@ export default function BrowsePage() {
                                 />
                                 {selectedFile && (
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Selected: {selectedFile.name} (
-                                        {formatBytes(selectedFile.size)})
+                                        Selected: {selectedFile.name} ({formatBytes(selectedFile.size)})
                                     </p>
                                 )}
                             </div>
@@ -697,14 +692,15 @@ export default function BrowsePage() {
                                             >
                                                 View
                                             </button>
-                                            {(profile?.role === "admin" || profile?.id === file.uploaded_by) && (
-                                                <button
-                                                    onClick={() => handleDelete(file.id)}
-                                                    className="text-xs text-red-400 hover:text-red-300 transition-colors px-2"
-                                                >
-                                                    Delete
-                                                </button>
-                                            )}
+                                            {(profile?.role === "admin" ||
+                                                profile?.id === file.uploaded_by) && (
+                                                    <button
+                                                        onClick={() => handleDelete(file.id)}
+                                                        className="text-xs text-red-400 hover:text-red-300 transition-colors px-2"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                )}
                                         </div>
                                     </div>
                                 ))}
@@ -712,6 +708,14 @@ export default function BrowsePage() {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* ── Inline file viewer ── */}
+            {viewingFileId && (
+                <FileViewer
+                    fileId={viewingFileId}
+                    onClose={() => setViewingFileId(null)}
+                />
             )}
         </div>
     );

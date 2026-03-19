@@ -18,4 +18,16 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    include: ["react-pdf"],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-pdf": ["react-pdf"],
+        },
+      },
+    },
+  },
 });

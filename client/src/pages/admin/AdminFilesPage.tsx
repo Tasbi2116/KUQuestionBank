@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FileText, Trash2, Search, Eye, Image } from "lucide-react";
 import api from "@/lib/axios";
 import { toast } from "react-hot-toast";
+import FileViewer from "@/components/FileViewer";
 
 interface AdminFile {
     id: string;
@@ -21,6 +22,9 @@ export default function AdminFilesPage() {
     const [filtered, setFiltered] = useState<AdminFile[]>([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
+
+    // Inline viewer state
+    const [viewingFileId, setViewingFileId] = useState<string | null>(null);
 
     const fetchFiles = async () => {
         try {
@@ -56,15 +60,9 @@ export default function AdminFilesPage() {
         );
     }, [search, files]);
 
-    const handleView = async (fileId: string) => {
-        try {
-            const { data } = await api.get(`/api/uploads/${fileId}`);
-            if (data.success && data.data.signed_url) {
-                window.open(data.data.signed_url, "_blank");
-            }
-        } catch {
-            toast.error("Failed to open file");
-        }
+    // Open inline viewer instead of new tab
+    const handleView = (fileId: string) => {
+        setViewingFileId(fileId);
     };
 
     const handleDelete = async (fileId: string, fileName: string) => {
@@ -85,7 +83,7 @@ export default function AdminFilesPage() {
     };
 
     return (
-        <div className="space-y-5 max-w-5xl">
+        <div className="space-y-5 max-w-5xl animate-fade-in">
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h1 className="text-xl font-semibold text-gray-100 flex items-center gap-2">
@@ -207,6 +205,14 @@ export default function AdminFilesPage() {
                         </table>
                     </div>
                 </div>
+            )}
+
+            {/* Inline file viewer */}
+            {viewingFileId && (
+                <FileViewer
+                    fileId={viewingFileId}
+                    onClose={() => setViewingFileId(null)}
+                />
             )}
         </div>
     );
