@@ -19,6 +19,7 @@ import AdminUsersPage from "@/pages/admin/AdminUsersPage";
 import AdminDepartmentsPage from "@/pages/admin/AdminDepartmentsPage";
 import AdminCoursesPage from "@/pages/admin/AdminCoursesPage";
 import AdminFilesPage from "@/pages/admin/AdminFilesPage";
+import SearchPage from "@/pages/SearchPage";
 
 function App(): JSX.Element {
   return (
@@ -38,6 +39,7 @@ function App(): JSX.Element {
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/browse" element={<BrowsePage />} />
+            <Route path="/search" element={<SearchPage />} />
             <Route path="/bookmarks" element={<BookmarksPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Route>

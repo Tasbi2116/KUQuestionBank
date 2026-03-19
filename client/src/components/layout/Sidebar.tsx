@@ -8,6 +8,7 @@ import {
     LogOut,
     ShieldCheck,
     Shield,
+    Search,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/utils/cn";
@@ -18,6 +19,7 @@ const navItems = [
     { to: "/browse", label: "Browse", icon: FolderOpen },
     { to: "/bookmarks", label: "Bookmarks", icon: Bookmark },
     { to: "/profile", label: "Profile", icon: User },
+    { to: "/search", label: "Search", icon: Search },
 ];
 
 interface Props {

@@ -16,6 +16,7 @@ import bookmarkRouter from "./routes/bookmarks";
 
 import { errorHandler } from "./middleware/errorHandler";
 import { notFound } from "./middleware/notFound";
+import searchRouter from "./routes/search";
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use("/api/courses", courseRouter);
 app.use("/api/uploads", uploadRouter);
 app.use("/api/notes", noteRouter);
 app.use("/api/bookmarks", bookmarkRouter);
+app.use("/api/search", searchRouter);
 
 // ─── Error Handlers ───────────────────────────────────────────────────────────
 app.use(notFound);

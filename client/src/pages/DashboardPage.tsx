@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { FolderOpen, Upload, Bookmark, BookOpen } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { FolderOpen, Upload, Bookmark, BookOpen, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/axios";
 
@@ -12,6 +12,7 @@ interface Stats {
 
 export default function DashboardPage() {
     const { profile } = useAuth();
+    const navigate = useNavigate();
     const [stats, setStats] = useState<Stats>({
         totalUploads: 0,
         totalBookmarks: 0,
@@ -70,7 +71,8 @@ export default function DashboardPage() {
                     Welcome back, {profile?.full_name?.split(" ")[0] ?? "Student"} 👋
                 </h1>
                 <p className="text-gray-400 text-sm mt-1">
-                    Student ID: {profile?.student_id} · {profile?.role === "admin" ? "Administrator" : "Student"}
+                    Student ID: {profile?.student_id} ·{" "}
+                    {profile?.role === "admin" ? "Administrator" : "Student"}
                 </p>
             </div>
 
@@ -78,7 +80,9 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {statCards.map(({ label, value, icon: Icon, color, bg }) => (
                     <div key={label} className="card flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center flex-shrink-0`}>
+                        <div
+                            className={`w-10 h-10 rounded-lg ${bg} flex items-center justify-center flex-shrink-0`}
+                        >
                             <Icon className={`w-5 h-5 ${color}`} />
                         </div>
                         <div>
@@ -89,9 +93,32 @@ export default function DashboardPage() {
                 ))}
             </div>
 
+            {/* Search quick access */}
+            <button
+                onClick={() => navigate("/search")}
+                className="w-full card flex items-center gap-3 text-left hover:border-primary-700/50 hover:bg-gray-800/30 transition-all duration-200 group"
+            >
+                <div className="w-10 h-10 rounded-lg bg-primary-600/10 flex items-center justify-center flex-shrink-0">
+                    <Search className="w-5 h-5 text-primary-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-300 group-hover:text-primary-400 transition-colors">
+                        Search question papers...
+                    </p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                        Search by course, batch, exam type
+                    </p>
+                </div>
+                <kbd className="hidden sm:flex items-center gap-1 text-xs text-gray-600 border border-gray-700 rounded px-2 py-1">
+                    Ctrl K
+                </kbd>
+            </button>
+
             {/* Quick actions */}
             <div>
-                <h2 className="text-sm font-medium text-gray-400 mb-3">Quick actions</h2>
+                <h2 className="text-sm font-medium text-gray-400 mb-3">
+                    Quick actions
+                </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Link
                         to="/browse"

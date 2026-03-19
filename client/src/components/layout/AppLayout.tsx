@@ -1,10 +1,23 @@
-import { useState } from "react";
-import { Outlet } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
+import { Menu, X, Search } from "lucide-react";
 import Sidebar from "./Sidebar";
 
 export default function AppLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const navigate = useNavigate();
+
+    // Global Ctrl+K shortcut → jump to search
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+                e.preventDefault();
+                navigate("/search");
+            }
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [navigate]);
 
     return (
         <div className="flex h-screen bg-gray-950 overflow-hidden">
@@ -36,13 +49,24 @@ export default function AppLayout() {
                     >
                         <Menu className="w-5 h-5" />
                     </button>
-                    <span className="text-sm font-medium text-gray-100">
+
+                    <span className="text-sm font-medium text-gray-100 flex-1">
                         KU Question Bank
                     </span>
+
+                    {/* Search button — mobile */}
+                    <button
+                        onClick={() => navigate("/search")}
+                        className="text-gray-400 hover:text-gray-100 transition-colors p-1"
+                        title="Search (Ctrl+K)"
+                    >
+                        <Search className="w-5 h-5" />
+                    </button>
+
                     {sidebarOpen && (
                         <button
                             onClick={() => setSidebarOpen(false)}
-                            className="ml-auto text-gray-400 hover:text-gray-100"
+                            className="text-gray-400 hover:text-gray-100"
                         >
                             <X className="w-5 h-5" />
                         </button>
