@@ -7,15 +7,20 @@ import {
     X,
     Minimize2,
     Maximize2,
+    StickyNote,
 } from "lucide-react";
+import { cn } from "@/utils/cn";
+import NotesPanel from "./NotesPanel";
 
 interface ImageViewerProps {
+    fileId: string;
     url: string;
     fileName: string;
     onClose: () => void;
 }
 
 export default function ImageViewer({
+    fileId,
     url,
     fileName,
     onClose,
@@ -23,6 +28,7 @@ export default function ImageViewer({
     const [scale, setScale] = useState(1.0);
     const [rotation, setRotation] = useState(0);
     const [fullscreen, setFullscreen] = useState(false);
+    const [showNotes, setShowNotes] = useState(false);
 
     const zoomIn = () => setScale((s) => Math.min(4.0, parseFloat((s + 0.25).toFixed(2))));
     const zoomOut = () => setScale((s) => Math.max(0.25, parseFloat((s - 0.25).toFixed(2))));
@@ -91,6 +97,23 @@ export default function ImageViewer({
 
                     <div className="w-px h-5 bg-gray-700 mx-1" />
 
+                    {/* Notes toggle */}
+                    <button
+                        onClick={() => setShowNotes((v) => !v)}
+                        title="Toggle notes panel"
+                        className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                            showNotes
+                                ? "bg-amber-600/20 text-amber-400 border border-amber-600/30"
+                                : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+                        )}
+                    >
+                        <StickyNote className="w-4 h-4" />
+                        Notes
+                    </button>
+
+                    <div className="w-px h-5 bg-gray-700 mx-1" />
+
 
                     <a
                         href={url}
@@ -113,21 +136,44 @@ export default function ImageViewer({
                 </div>
             </div>
 
-            {/* Image area */}
-            <div className="flex-1 overflow-auto flex items-center justify-center p-6 bg-gray-950">
-                <img
-                    src={url}
-                    alt={fileName}
-                    style={{
-                        transform: `scale(${scale}) rotate(${rotation}deg)`,
-                        transition: "transform 0.2s ease",
-                        maxWidth: "100%",
-                        maxHeight: "100%",
-                        objectFit: "contain",
-                        borderRadius: "4px",
-                        boxShadow: "0 25px 50px rgba(0,0,0,0.7)",
-                    }}
-                />
+            {/* Main area: Image + optional Notes panel */}
+            <div className="flex flex-1 overflow-hidden">
+                {/* Image area */}
+                <div className="flex-1 overflow-auto flex items-center justify-center p-6 bg-gray-950">
+                    <img
+                        src={url}
+                        alt={fileName}
+                        style={{
+                            transform: `scale(${scale}) rotate(${rotation}deg)`,
+                            transition: "transform 0.2s ease",
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                            objectFit: "contain",
+                            borderRadius: "4px",
+                            boxShadow: "0 25px 50px rgba(0,0,0,0.7)",
+                        }}
+                    />
+                </div>
+
+                {/* Notes panel */}
+                {showNotes && (
+                    <div
+                        className="w-80 flex-shrink-0 border-l border-gray-800"
+                        style={{ animation: "slideInRight 0.2s ease-out" }}
+                    >
+                        <style>{`
+              @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to   { transform: translateX(0);    opacity: 1; }
+              }
+            `}</style>
+                        <NotesPanel
+                            fileId={fileId}
+                            fileName={fileName}
+                            onClose={() => setShowNotes(false)}
+                        />
+                    </div>
+                )}
             </div>
         </div >
     );

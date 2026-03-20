@@ -22,7 +22,6 @@ export default function FileViewer({ fileId, onClose }: FileViewerProps) {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Close on Escape key
         const handler = (e: KeyboardEvent) => {
             if (e.key === "Escape") onClose();
         };
@@ -31,7 +30,6 @@ export default function FileViewer({ fileId, onClose }: FileViewerProps) {
     }, [onClose]);
 
     useEffect(() => {
-        // Prevent background scroll while viewer is open
         document.body.style.overflow = "hidden";
         return () => {
             document.body.style.overflow = "";
@@ -56,7 +54,6 @@ export default function FileViewer({ fileId, onClose }: FileViewerProps) {
         fetchFile();
     }, [fileId]);
 
-    // Loading state
     if (loading) {
         return (
             <div className="fixed inset-0 z-50 bg-gray-950 flex items-center justify-center">
@@ -68,7 +65,6 @@ export default function FileViewer({ fileId, onClose }: FileViewerProps) {
         );
     }
 
-    // Error state
     if (error || !fileData) {
         return (
             <div className="fixed inset-0 z-50 bg-gray-950 flex items-center justify-center">
@@ -86,10 +82,10 @@ export default function FileViewer({ fileId, onClose }: FileViewerProps) {
         );
     }
 
-    // Route to correct viewer
     if (fileData.file_type === "pdf") {
         return (
             <PDFViewer
+                fileId={fileId}
                 url={fileData.signed_url}
                 fileName={fileData.file_name}
                 onClose={onClose}
@@ -99,6 +95,7 @@ export default function FileViewer({ fileId, onClose }: FileViewerProps) {
 
     return (
         <ImageViewer
+            fileId={fileId}
             url={fileData.signed_url}
             fileName={fileData.file_name}
             onClose={onClose}

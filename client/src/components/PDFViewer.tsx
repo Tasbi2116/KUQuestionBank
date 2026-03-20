@@ -14,22 +14,29 @@ import {
     AlertCircle,
     Maximize2,
     Minimize2,
+    StickyNote,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import NotesPanel from "./NotesPanel";
 
-// Use local worker from the public folder (most reliable approach)
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     "pdfjs-dist/build/pdf.worker.min.mjs",
     import.meta.url
 ).toString();
 
 interface PDFViewerProps {
+    fileId: string;
     url: string;
     fileName: string;
     onClose: () => void;
 }
 
-export default function PDFViewer({ url, fileName, onClose }: PDFViewerProps) {
+export default function PDFViewer({
+    fileId,
+    url,
+    fileName,
+    onClose,
+}: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageNumber, setPageNumber] = useState(1);
     const [scale, setScale] = useState(1.0);
@@ -38,6 +45,7 @@ export default function PDFViewer({ url, fileName, onClose }: PDFViewerProps) {
     const [error, setError] = useState<string | null>(null);
     const [fullscreen, setFullscreen] = useState(false);
     const [pageInput, setPageInput] = useState("");
+    const [showNotes, setShowNotes] = useState(false);
 
     const onDocumentLoadSuccess = useCallback(
         ({ numPages }: { numPages: number }) => {
@@ -53,13 +61,12 @@ export default function PDFViewer({ url, fileName, onClose }: PDFViewerProps) {
         setError(err.message || "Failed to load PDF");
     }, []);
 
-    const goToPrev = () => {
-        setPageNumber((p) => Math.max(1, p - 1));
-    };
-
-    const goToNext = () => {
-        setPageNumber((p) => Math.min(numPages, p + 1));
-    };
+    const goToPrev = () => setPageNumber((p) => Math.max(1, p - 1));
+    const goToNext = () => setPageNumber((p) => Math.min(numPages, p + 1));
+    const zoomIn = () => setScale((s) => Math.min(3.0, parseFloat((s + 0.25).toFixed(2))));
+    const zoomOut = () => setScale((s) => Math.max(0.5, parseFloat((s - 0.25).toFixed(2))));
+    const rotate = () => setRotation((r) => (r + 90) % 360);
+    const resetZoom = () => setScale(1.0);
 
     const handlePageInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter") {
@@ -71,18 +78,8 @@ export default function PDFViewer({ url, fileName, onClose }: PDFViewerProps) {
         }
     };
 
-    const zoomIn = () => setScale((s) => Math.min(3.0, parseFloat((s + 0.25).toFixed(2))));
-    const zoomOut = () => setScale((s) => Math.max(0.5, parseFloat((s - 0.25).toFixed(2))));
-    const rotate = () => setRotation((r) => (r + 90) % 360);
-    const resetZoom = () => setScale(1.0);
-
     return (
-        <div
-            className={cn(
-                "fixed inset-0 z-50 flex flex-col bg-gray-950",
-                fullscreen ? "inset-0" : ""
-            )}
-        >
+        <div className="fixed inset-0 z-50 flex flex-col bg-gray-950">
             {/* ── Toolbar ── */}
             <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 border-b border-gray-800 flex-shrink-0">
                 {/* File name */}
@@ -139,7 +136,7 @@ export default function PDFViewer({ url, fileName, onClose }: PDFViewerProps) {
                         <RotateCw className="w-4 h-4" />
                     </button>
 
-                    {/* Fullscreen toggle */}
+                    {/* Fullscreen */}
                     <button
                         onClick={() => setFullscreen((v) => !v)}
                         title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
@@ -150,6 +147,23 @@ export default function PDFViewer({ url, fileName, onClose }: PDFViewerProps) {
                         ) : (
                             <Maximize2 className="w-4 h-4" />
                         )}
+                    </button>
+
+                    <div className="w-px h-5 bg-gray-700 mx-1" />
+
+                    {/* Notes toggle */}
+                    <button
+                        onClick={() => setShowNotes((v) => !v)}
+                        title="Toggle notes panel"
+                        className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                            showNotes
+                                ? "bg-amber-600/20 text-amber-400 border border-amber-600/30"
+                                : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+                        )}
+                    >
+                        <StickyNote className="w-4 h-4" />
+                        Notes
                     </button>
 
                     <div className="w-px h-5 bg-gray-700 mx-1" />
@@ -177,67 +191,89 @@ export default function PDFViewer({ url, fileName, onClose }: PDFViewerProps) {
                 </div>
             </div>
 
-            {/* ── PDF area ── */}
-            <div className="flex-1 overflow-auto bg-gray-950 flex items-start justify-center p-4">
-                {/* Loading state */}
-                {loading && (
-                    <div className="flex flex-col items-center justify-center gap-3 mt-20 text-gray-400">
-                        <Loader className="w-8 h-8 animate-spin text-primary-400" />
-                        <p className="text-sm">Loading PDF...</p>
-                    </div>
-                )}
-
-                {/* Error state */}
-                {error && !loading && (
-                    <div className="flex flex-col items-center justify-center gap-3 mt-20 max-w-sm text-center">
-                        <div className="w-12 h-12 rounded-full bg-red-900/20 flex items-center justify-center">
-                            <AlertCircle className="w-6 h-6 text-red-400" />
+            {/* ── Main area: PDF + optional Notes panel ── */}
+            <div className="flex flex-1 overflow-hidden">
+                {/* PDF area */}
+                <div className="flex-1 overflow-auto bg-gray-950 flex items-start justify-center p-4">
+                    {loading && (
+                        <div className="flex flex-col items-center justify-center gap-3 mt-20 text-gray-400">
+                            <Loader className="w-8 h-8 animate-spin text-primary-400" />
+                            <p className="text-sm">Loading PDF...</p>
                         </div>
-                        <p className="text-gray-300 font-medium">Failed to load PDF</p>
-                        <p className="text-gray-500 text-sm">{error}</p>
+                    )}
 
-                        <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn-primary text-sm mt-2"
-                        >
-                            <Download className="w-4 h-4" />
-                            Download instead
-                        </a>
-                    </div>
-                )
-                }
-
-                {/* PDF Document */}
-                <Document
-                    file={url}
-                    onLoadSuccess={onDocumentLoadSuccess}
-                    onLoadError={onDocumentLoadError}
-                    loading=""
-                    className={cn(loading || error ? "hidden" : "")}
-                >
-                    <Page
-                        pageNumber={pageNumber}
-                        scale={scale}
-                        rotate={rotation}
-                        className="shadow-2xl"
-                        renderTextLayer={true}
-                        renderAnnotationLayer={true}
-                        loading={
-                            <div className="flex items-center justify-center w-[612px] h-[792px] bg-gray-900 rounded">
-                                <Loader className="w-6 h-6 animate-spin text-primary-400" />
+                    {error && !loading && (
+                        <div className="flex flex-col items-center justify-center gap-3 mt-20 max-w-sm text-center">
+                            <div className="w-12 h-12 rounded-full bg-red-900/20 flex items-center justify-center">
+                                <AlertCircle className="w-6 h-6 text-red-400" />
                             </div>
-                        }
-                    />
-                </Document>
+                            <p className="text-gray-300 font-medium">Failed to load PDF</p>
+                            <p className="text-gray-500 text-sm">{error}</p>
+
+                            <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-primary text-sm mt-2"
+                            >
+                                <Download className="w-4 h-4" />
+                                Download instead
+                            </a>
+                        </div>
+                    )}
+
+                    <Document
+                        file={url}
+                        onLoadSuccess={onDocumentLoadSuccess}
+                        onLoadError={onDocumentLoadError}
+                        loading=""
+                        className={cn(loading || error ? "hidden" : "")}
+                    >
+                        <Page
+                            pageNumber={pageNumber}
+                            scale={scale}
+                            rotate={rotation}
+                            className="shadow-2xl"
+                            renderTextLayer={true}
+                            renderAnnotationLayer={true}
+                            loading={
+                                <div className="flex items-center justify-center w-[612px] h-[792px] bg-gray-900 rounded">
+                                    <Loader className="w-6 h-6 animate-spin text-primary-400" />
+                                </div>
+                            }
+                        />
+                    </Document>
+                </div>
+
+                {/* Notes panel — slides in from the right */}
+                {
+                    showNotes && (
+                        <div
+                            className="w-80 flex-shrink-0 border-l border-gray-800"
+                            style={{
+                                animation: "slideInRight 0.2s ease-out",
+                            }}
+                        >
+                            <style>{`
+              @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to   { transform: translateX(0);    opacity: 1; }
+              }
+            `}</style>
+                            <NotesPanel
+                                fileId={fileId}
+                                fileName={fileName}
+                                onClose={() => setShowNotes(false)}
+                            />
+                        </div>
+                    )
+                }
             </div >
 
             {/* ── Page navigation ── */}
             {
                 !loading && !error && numPages > 0 && (
                     <div className="flex items-center justify-center gap-3 py-3 bg-gray-900 border-t border-gray-800 flex-shrink-0">
-                        {/* Prev */}
                         <button
                             onClick={goToPrev}
                             disabled={pageNumber <= 1}
@@ -246,7 +282,6 @@ export default function PDFViewer({ url, fileName, onClose }: PDFViewerProps) {
                             <ChevronLeft className="w-5 h-5" />
                         </button>
 
-                        {/* Page indicator / input */}
                         <div className="flex items-center gap-2 text-sm text-gray-400">
                             <span>Page</span>
                             <input
@@ -261,7 +296,6 @@ export default function PDFViewer({ url, fileName, onClose }: PDFViewerProps) {
                             <span>of {numPages}</span>
                         </div>
 
-                        {/* Next */}
                         <button
                             onClick={goToNext}
                             disabled={pageNumber >= numPages}
