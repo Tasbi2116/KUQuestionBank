@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
     ChevronRight,
@@ -9,6 +9,8 @@ import {
     FileText,
     Image,
     Lock,
+    Filter,
+    X,
 } from "lucide-react";
 import api from "@/lib/axios";
 import { Department } from "@/types";
@@ -65,6 +67,10 @@ export default function BrowsePage() {
     // ── Inline file viewer ────────────────────────────────────────────────────
     const [viewingFileId, setViewingFileId] = useState<string | null>(null);
 
+    // ── Batch year + exam type filters ───────────────────────────────────────
+    const [filterBatch, setFilterBatch] = useState("");
+    const [filterExamType, setFilterExamType] = useState("");
+
     // Upload form state
     const [uploadForm, setUploadForm] = useState({
         batch: "",
@@ -117,10 +123,12 @@ export default function BrowsePage() {
             .finally(() => setLoading(false));
     }, [selectedDept, selectedDegree, selectedTerm]);
 
-    // Load files when course selected
+    // Load files when course selected — reset filters on every new course
     useEffect(() => {
         if (!selectedCourseId) return;
         setLoading(true);
+        setFilterBatch("");
+        setFilterExamType("");
         const course = courses.find((c) => c.id === selectedCourseId);
         if (course) setSelectedCourse(course);
         api
@@ -134,6 +142,31 @@ export default function BrowsePage() {
     }, [selectedCourseId, courses]);
 
     const selectedDeptObj = departments.find((d) => d.id === selectedDept);
+
+    // ── Derived: unique sorted batch years from loaded files ─────────────────
+    // e.g. files have batch "21", "22", "23" → dropdown shows those only
+    const availableBatches = useMemo(() => {
+        const batches = Array.from(new Set(files.map((f) => f.batch)))
+            .filter(Boolean)
+            .sort((a, b) => b.localeCompare(a)); // newest batch first
+        return batches;
+    }, [files]);
+
+    // ── Derived: filtered file list — recomputed whenever files or filters change
+    const filteredFiles = useMemo(() => {
+        return files.filter((file) => {
+            const batchMatch = filterBatch === "" || file.batch === filterBatch;
+            const examTypeMatch = filterExamType === "" || file.exam_type === filterExamType;
+            return batchMatch && examTypeMatch;
+        });
+    }, [files, filterBatch, filterExamType]);
+
+    const hasActiveFilters = filterBatch !== "" || filterExamType !== "";
+
+    const clearFilters = () => {
+        setFilterBatch("");
+        setFilterExamType("");
+    };
 
     // Handle file upload with real progress tracking
     const handleUpload = async () => {
@@ -163,7 +196,6 @@ export default function BrowsePage() {
 
             const { data } = await api.post("/api/uploads", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
-                // Real progress event from Axios
                 onUploadProgress: (progressEvent) => {
                     if (progressEvent.total) {
                         const percent = Math.round(
@@ -179,12 +211,16 @@ export default function BrowsePage() {
                 toast.success("File uploaded successfully!");
                 setSelectedFile(null);
                 setUploadForm({ batch: "", exam_type: "Term Final", description: "" });
-                // Refresh file list
+                // Refresh file list and reset filters so new file is visible
                 const refreshed = await api.get<{
                     success: boolean;
                     data: QuestionFile[];
                 }>(`/api/uploads?course_id=${selectedCourseId}`);
-                if (refreshed.data.success) setFiles(refreshed.data.data);
+                if (refreshed.data.success) {
+                    setFiles(refreshed.data.data);
+                    setFilterBatch("");
+                    setFilterExamType("");
+                }
             }
         } catch {
             toast.error("Upload failed. Please try again.");
@@ -608,7 +644,7 @@ export default function BrowsePage() {
                                 )}
                             </div>
 
-                            {/* ── Real upload progress bar ───────────────────────────── */}
+                            {/* Upload progress bar */}
                             {uploading && (
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between text-xs">
@@ -674,19 +710,83 @@ export default function BrowsePage() {
                         </div>
                     )}
 
-                    {/* Files list */}
+                    {/* ── Files list ── */}
                     <div>
-                        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-                            {loading
-                                ? "Loading files..."
-                                : `${files.length} question paper${files.length !== 1 ? "s" : ""} available`}
-                        </h3>
+                        {/* Header row: count + filter controls */}
+                        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {loading
+                                    ? "Loading files..."
+                                    : hasActiveFilters
+                                        ? `${filteredFiles.length} of ${files.length} question paper${files.length !== 1 ? "s" : ""}`
+                                        : `${files.length} question paper${files.length !== 1 ? "s" : ""} available`}
+                            </h3>
 
+                            {/* Filter controls — only shown when files exist */}
+                            {!loading && files.length > 0 && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <Filter className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
+
+                                    {/* Batch year dropdown — options built from actual file data */}
+                                    <select
+                                        value={filterBatch}
+                                        onChange={(e) => setFilterBatch(e.target.value)}
+                                        className={cn(
+                                            "text-xs rounded-lg border px-2.5 py-1.5 bg-gray-900 transition-colors focus:outline-none focus:ring-1 focus:ring-primary-500",
+                                            filterBatch
+                                                ? "border-primary-600/50 text-primary-400"
+                                                : "border-gray-700 text-gray-400"
+                                        )}
+                                    >
+                                        <option value="">All batches</option>
+                                        {availableBatches.map((batch) => (
+                                            <option key={batch} value={batch}>
+                                                Batch {batch}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    {/* Exam type dropdown */}
+                                    <select
+                                        value={filterExamType}
+                                        onChange={(e) => setFilterExamType(e.target.value)}
+                                        className={cn(
+                                            "text-xs rounded-lg border px-2.5 py-1.5 bg-gray-900 transition-colors focus:outline-none focus:ring-1 focus:ring-primary-500",
+                                            filterExamType
+                                                ? "border-primary-600/50 text-primary-400"
+                                                : "border-gray-700 text-gray-400"
+                                        )}
+                                    >
+                                        <option value="">All exam types</option>
+                                        {EXAM_TYPES.map((t) => (
+                                            <option key={t} value={t}>
+                                                {t}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    {/* Clear filters button — only when a filter is active */}
+                                    {hasActiveFilters && (
+                                        <button
+                                            onClick={clearFilters}
+                                            className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 border border-red-800/40 hover:border-red-700/60 rounded-lg px-2.5 py-1.5 transition-colors"
+                                            title="Clear all filters"
+                                        >
+                                            <X className="w-3 h-3" />
+                                            Clear
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* File list body */}
                         {loading ? (
                             <div className="flex justify-center py-8">
                                 <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
                             </div>
                         ) : files.length === 0 ? (
+                            /* No files uploaded at all */
                             <div className="card text-center py-10">
                                 <FolderOpen className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                                 <p className="text-gray-400 font-medium">No files yet</p>
@@ -696,9 +796,29 @@ export default function BrowsePage() {
                                         : "No question papers have been uploaded for this course yet."}
                                 </p>
                             </div>
+                        ) : filteredFiles.length === 0 ? (
+                            /* Files exist but current filter returns nothing */
+                            <div className="card text-center py-8">
+                                <Filter className="w-8 h-8 text-gray-600 mx-auto mb-3" />
+                                <p className="text-gray-400 font-medium">No files match your filters</p>
+                                <p className="text-gray-500 text-sm mt-1">
+                                    {filterBatch && filterExamType
+                                        ? `No ${filterExamType} papers found for Batch ${filterBatch}`
+                                        : filterBatch
+                                            ? `No papers found for Batch ${filterBatch}`
+                                            : `No ${filterExamType} papers found`}
+                                </p>
+                                <button
+                                    onClick={clearFilters}
+                                    className="mt-3 text-sm text-primary-400 hover:text-primary-300 transition-colors"
+                                >
+                                    Clear filters to see all {files.length} file{files.length !== 1 ? "s" : ""}
+                                </button>
+                            </div>
                         ) : (
+                            /* Render filtered file cards */
                             <div className="space-y-2">
-                                {files.map((file) => (
+                                {filteredFiles.map((file) => (
                                     <div
                                         key={file.id}
                                         className="card flex items-center justify-between gap-4"
@@ -715,13 +835,22 @@ export default function BrowsePage() {
                                                 <p className="text-sm font-medium text-gray-100 truncate">
                                                     {file.file_name}
                                                 </p>
-                                                <p className="text-xs text-gray-500">
-                                                    {file.exam_type} · Batch {file.batch} ·{" "}
-                                                    {formatBytes(file.file_size)} · by{" "}
-                                                    {file.profiles?.full_name ?? "Unknown"}
-                                                </p>
+                                                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                                    <span className="text-xs text-amber-400 bg-amber-900/20 border border-amber-800/30 px-1.5 py-0.5 rounded-full">
+                                                        {file.exam_type}
+                                                    </span>
+                                                    <span className="text-xs text-primary-400 bg-primary-900/20 border border-primary-800/30 px-1.5 py-0.5 rounded-full">
+                                                        Batch {file.batch}
+                                                    </span>
+                                                    <span className="text-xs text-gray-600">
+                                                        {formatBytes(file.file_size)}
+                                                    </span>
+                                                    <span className="text-xs text-gray-600">
+                                                        by {file.profiles?.full_name ?? "Unknown"}
+                                                    </span>
+                                                </div>
                                                 {file.description && (
-                                                    <p className="text-xs text-gray-600 mt-0.5">
+                                                    <p className="text-xs text-gray-600 mt-0.5 italic">
                                                         {file.description}
                                                     </p>
                                                 )}
