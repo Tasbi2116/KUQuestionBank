@@ -59,7 +59,10 @@ export default function BrowsePage() {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
 
-    // ── Inline file viewer state (fixed: moved inside component) ──────────────
+    // ── Upload progress (0–100) ───────────────────────────────────────────────
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    // ── Inline file viewer ────────────────────────────────────────────────────
     const [viewingFileId, setViewingFileId] = useState<string | null>(null);
 
     // Upload form state
@@ -132,7 +135,7 @@ export default function BrowsePage() {
 
     const selectedDeptObj = departments.find((d) => d.id === selectedDept);
 
-    // Handle file upload
+    // Handle file upload with real progress tracking
     const handleUpload = async () => {
         if (!selectedFile) {
             toast.error("Please select a file");
@@ -148,6 +151,8 @@ export default function BrowsePage() {
         }
 
         setUploading(true);
+        setUploadProgress(0);
+
         try {
             const formData = new FormData();
             formData.append("file", selectedFile);
@@ -158,9 +163,19 @@ export default function BrowsePage() {
 
             const { data } = await api.post("/api/uploads", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
+                // Real progress event from Axios
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total) {
+                        const percent = Math.round(
+                            (progressEvent.loaded * 100) / progressEvent.total
+                        );
+                        setUploadProgress(percent);
+                    }
+                },
             });
 
             if (data.success) {
+                setUploadProgress(100);
                 toast.success("File uploaded successfully!");
                 setSelectedFile(null);
                 setUploadForm({ batch: "", exam_type: "Term Final", description: "" });
@@ -175,6 +190,7 @@ export default function BrowsePage() {
             toast.error("Upload failed. Please try again.");
         } finally {
             setUploading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -585,12 +601,37 @@ export default function BrowsePage() {
                     hover:file:bg-primary-700
                     file:cursor-pointer file:transition-colors"
                                 />
-                                {selectedFile && (
+                                {selectedFile && !uploading && (
                                     <p className="text-xs text-gray-500 mt-1">
                                         Selected: {selectedFile.name} ({formatBytes(selectedFile.size)})
                                     </p>
                                 )}
                             </div>
+
+                            {/* ── Real upload progress bar ───────────────────────────── */}
+                            {uploading && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-400">
+                                            {uploadProgress < 100 ? "Uploading..." : "Processing..."}
+                                        </span>
+                                        <span className="font-mono font-medium text-gray-300">
+                                            {uploadProgress}%
+                                        </span>
+                                    </div>
+                                    <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-primary-500 rounded-full transition-all duration-200"
+                                            style={{ width: `${uploadProgress}%` }}
+                                        />
+                                    </div>
+                                    {selectedFile && (
+                                        <p className="text-xs text-gray-600 truncate">
+                                            {selectedFile.name} · {formatBytes(selectedFile.size)}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             <button
                                 onClick={handleUpload}
@@ -603,7 +644,9 @@ export default function BrowsePage() {
                                 {uploading ? (
                                     <span className="flex items-center gap-2">
                                         <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        Uploading...
+                                        {uploadProgress < 100
+                                            ? `Uploading ${uploadProgress}%`
+                                            : "Processing..."}
                                     </span>
                                 ) : (
                                     <span className="flex items-center gap-2">
