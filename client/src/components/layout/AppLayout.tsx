@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { Menu, X, Search } from "lucide-react";
 import Sidebar from "./Sidebar";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function AppLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -54,6 +55,7 @@ export default function AppLayout() {
                         KU Question Bank
                     </span>
 
+                    <ThemeToggle variant="compact" className="mr-2" />
                     {/* Search button — mobile */}
                     <button
                         onClick={() => navigate("/search")}

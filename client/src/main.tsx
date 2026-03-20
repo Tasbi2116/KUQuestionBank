@@ -1,27 +1,26 @@
-import { createRoot } from "react-dom/client";
+import React from "react";
+import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import "@/index.css";
-import App from "@/App";
+import App from "./App";
+import { ThemeProvider } from "./context/ThemeContext";
+import "./index.css";
 
-const rootElement = document.getElementById("root");
-if (!rootElement) throw new Error("Root element not found");
-
-createRoot(rootElement).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
-    <App />
-    <Toaster
-      position="top-right"
-      toastOptions={{
-        style: {
-          background: "#1f2937",
-          color: "#f3f4f6",
-          border: "1px solid #374151",
-        },
-        success: {
-          iconTheme: { primary: "#6366f1", secondary: "#fff" },
-        },
-      }}
-    />
+    <ThemeProvider>
+      <App />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "var(--toast-bg, #1f2937)",
+            color: "var(--toast-color, #f3f4f6)",
+            border: "1px solid var(--toast-border, #374151)",
+          },
+        }}
+      />
+    </ThemeProvider>
   </BrowserRouter>
 );

@@ -246,7 +246,7 @@ export default function LandingPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-950 text-gray-100">
+        <div className="min-h-screen bg-gray-950 dark:bg-gray-950 text-gray-100 dark:text-gray-100">
             {/* ── Floating particle CSS ── */}
             <style>{`
         @keyframes float {

@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/utils/cn";
 import { toast } from "react-hot-toast";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function AdminSidebar({ onClose }: { onClose?: () => void }) {
     const { profile, signOut } = useAuth();
@@ -155,6 +156,7 @@ function AdminSidebar({ onClose }: { onClose?: () => void }) {
                         </p>
                     </div>
                 </div>
+                <ThemeToggle variant="full" className="mb-2" />
                 <button
                     onClick={handleSignOut}
                     className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-red-900/20 hover:text-red-400 transition-colors"
