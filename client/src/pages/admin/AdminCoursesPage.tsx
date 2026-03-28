@@ -21,7 +21,7 @@ interface Course {
 
 const TERMS = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
 const DEGREES = ["BSc", "BSc(OBE)", "MSc"];
-const COURSE_TYPES = ["theory", "lab", "project", "thesis", "elective"];
+const COURSE_TYPES = ["theory", "sessional", "lab", "project", "thesis", "elective"];
 
 export default function AdminCoursesPage() {
     const { profile } = useAuth();
