@@ -35,6 +35,11 @@ export default function RegisterPage() {
             });
     }, []);
 
+    // Replace history so browser back from register goes to landing page
+    useEffect(() => {
+        window.history.replaceState(null, "", "/register");
+    }, []);
+
     const set =
         (field: keyof typeof form) =>
             (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>

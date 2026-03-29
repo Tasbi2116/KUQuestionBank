@@ -21,6 +21,11 @@ export default function LoginPage() {
         });
     }, [navigate]);
 
+    // Replace history so browser back from login goes to landing page
+    useEffect(() => {
+        window.history.replaceState(null, "", "/login");
+    }, []);
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setLoading(true);
